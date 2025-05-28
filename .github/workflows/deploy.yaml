@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+
+env:
+  IMAGE_NAME: fastapi-app
+
 jobs:
   test:
     runs-on: ubuntu-latest
