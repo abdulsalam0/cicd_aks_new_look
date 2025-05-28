@@ -77,9 +77,6 @@ jobs:
   deploy-test:
     # needs: health-check-dev
     runs-on: ubuntu-latest
-    environment:
-      name: test-env
-      url: https://test.example.com 
 
     steps:
     - name: Await manual approval
