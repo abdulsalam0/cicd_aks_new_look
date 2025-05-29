@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 env:
   IMAGE_NAME: fastapi-app
 
 jobs:
-  test:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -30,7 +34,7 @@ jobs:
         make test
   
   build-and-push:
-    needs: test
+    needs: unit-tests
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -51,8 +55,14 @@ jobs:
         docker push ${{ secrets.REGISTRY_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   deploy-dev:
+    name: Deploy to Dev Environment
+    if: github.event_name == 'pull_request'
     needs: build-and-push
     runs-on: ubuntu-latest
+    environment: 
+      name: dev
+      url: https://dev.example.com
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -74,8 +84,14 @@ jobs:
         kubectl rollout status deployment/fastapi-app -n dev
 
   deploy-test:
-    # needs: health-check-dev
+    name: Deploy to Test Environment
+    if: github.event.ref == 'refs/heads/main'
+    needs: build-and-push
     runs-on: ubuntu-latest
+
+    environment: 
+      name: test
+      url: https://test.example.com
 
     steps:
     - name: Await manual approval
