@@ -94,11 +94,6 @@ jobs:
       url: https://test.example.com
 
     steps:
-    - name: Await manual approval
-      uses: hmarr/auto-approve-action@v3
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Checkout code
       uses: actions/checkout@v3
 
