@@ -9,6 +9,10 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+  security-events: write
 env:
   IMAGE_NAME: fastapi-app
 
@@ -37,7 +41,6 @@ jobs:
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: 'trivy-results.sarif'
-
   unit-tests:
     needs: fs-scan-trivy
     runs-on: ubuntu-latest
@@ -58,7 +61,6 @@ jobs:
     - name: Run unit tests
       run: |
         make test
-  
   build-and-push:
     needs: unit-tests
     runs-on: ubuntu-latest
@@ -122,7 +124,6 @@ jobs:
     - name: Wait for rollout to finish
       run: |
         kubectl rollout status deployment/fastapi-app -n dev
-
   deploy-test:
     name: Deploy to Test Environment
     if: github.event.ref == 'refs/heads/main'
