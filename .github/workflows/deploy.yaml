@@ -13,7 +13,33 @@ env:
   IMAGE_NAME: fastapi-app
 
 jobs:
+
+  fs-scan-trivy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner in fs mode
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: 'fs'
+        scanners: 'vuln,config'
+        scan-ref: '.'
+        hide-progress: false
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        exit-code: '0' # Set to '0' to not fail the job on vulnerabilities
+        ignore-unfixed: true
+        severity: 'CRITICAL,HIGH'
+        trivy-config: trivy.yaml
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+
   unit-tests:
+    needs: fs-scan-trivy
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -49,11 +75,23 @@ jobs:
       run: |
         az acr login --name ${{ secrets.REGISTRY_NAME }}
 
-    - name: Build and push Docker image
+    - name: Build Docker image
       run: |
         docker build -t ${{ secrets.REGISTRY_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
-        docker push ${{ secrets.REGISTRY_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
+    - name: Push Docker image
+      run: |
+        docker push ${{ secrets.REGISTRY_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+    
+    - name: run Trivy vulnerability scanner in image mode
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: ${{ secrets.REGISTRY_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        format: 'table'
+        exit-code: '0' # Set to '0' to not fail the job on vulnerabilities
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH'
   deploy-dev:
     name: Deploy to Dev Environment
     if: github.event_name == 'pull_request'
